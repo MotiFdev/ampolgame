@@ -44,7 +44,7 @@ export const EnemyConstants = {
     OFFSET_Y: 260,
     
     // Health
-    BASIC_HEALTH: 100,
+    BASIC_HEALTH: 220,
     AGGRESSIVE_HEALTH: 80,
     PASSIVE_HEALTH: 30,
     

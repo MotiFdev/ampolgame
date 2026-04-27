@@ -107,7 +107,19 @@ export class Game extends Phaser.Scene {
         const attackState = this.getEnemyAttackState(enemy);
 
         if (now > this.playerDamageCooldown && attackState.isActiveHitWindow) {
-            const damage = EnemyConstants.COMBAT_DAMAGE;
+            const closeEnough = Phaser.Math.Distance.Between(
+                enemy.x,
+                enemy.y,
+                player.x,
+                player.y
+            ) <= EnemyConstants.ATTACK_RANGE + 60;
+
+            if (!closeEnough) return;
+
+            const damage = attackState.isKick
+                ? Math.floor(EnemyConstants.COMBAT_DAMAGE * 1.15)
+                : EnemyConstants.COMBAT_DAMAGE;
+
             this.damagePlayer(damage);
             
             // Knockback player
@@ -124,8 +136,8 @@ export class Game extends Phaser.Scene {
         const isPunch = currentAnimKey.endsWith('_punch');
         const isKick = currentAnimKey.endsWith('_kick');
 
-        const punchActiveWindow = isPunch && progress >= 0.45 && progress <= 0.95;
-        const kickActiveWindow = isKick && progress >= 0.35 && progress <= 0.95;
+        const punchActiveWindow = isPunch && progress >= 0.3 && progress <= 0.98;
+        const kickActiveWindow = isKick && progress >= 0.25 && progress <= 0.98;
 
         return {
             isKick,
@@ -148,12 +160,12 @@ export class Game extends Phaser.Scene {
                 enemy.y,
                 this.player.x,
                 this.player.y
-            ) <= EnemyConstants.ATTACK_RANGE + 35;
+            ) <= EnemyConstants.ATTACK_RANGE + 60;
 
             if (!closeEnough) continue;
 
             const damage = attackState.isKick
-                ? EnemyConstants.COMBAT_DAMAGE
+                ? Math.floor(EnemyConstants.COMBAT_DAMAGE * 1.15)
                 : EnemyConstants.COMBAT_DAMAGE;
 
             this.damagePlayer(damage);
