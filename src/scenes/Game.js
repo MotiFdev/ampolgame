@@ -15,6 +15,11 @@ export class Game extends Phaser.Scene {
         this.playerMaxHealth = 100;
         this.playerDamageCooldown = 0;
         this.isGameEnding = false;
+        this.isMobileDevice = this.detectMobileDevice();
+
+        if (this.isMobileDevice) {
+            this.input.addPointer(3);
+        }
 
         // Background
         this.add.image(0, 0, 'fightbg')
@@ -39,6 +44,9 @@ export class Game extends Phaser.Scene {
         
         // Create player
         this.player = new Player(this, 200, 500);
+        if (this.isMobileDevice) {
+            this.player.enableTouchControls();
+        }
         this.physics.add.collider(this.player, this.ground);
         
         // Create enemies (Ampol)
@@ -184,6 +192,186 @@ export class Game extends Phaser.Scene {
         
         // Enemy Health Bar
         this.createEnemyHealthBar();
+
+        if (this.isMobileDevice) {
+            this.createMobileControls();
+        } else {
+            // Control guide
+            this.createControlGuide();
+        }
+    }
+
+    detectMobileDevice() {
+        if (typeof navigator === 'undefined') return false;
+
+        if (navigator.userAgentData && typeof navigator.userAgentData.mobile === 'boolean') {
+            return navigator.userAgentData.mobile;
+        }
+
+        const userAgent = navigator.userAgent || navigator.vendor || '';
+        return /Android.*Mobile|iPhone|iPod|Windows Phone/i.test(userAgent);
+    }
+
+    createMobileControls() {
+        const baseY = this.scale.height - 120;
+        const leftX = 120;
+        const rightX = 235;
+        const jumpX = this.scale.width - 270;
+        const attackX = this.scale.width - 160;
+        const kickX = this.scale.width - 50;
+
+        this.add.rectangle(170, baseY + 12, 300, 150, 0x050814, 0.48)
+            .setStrokeStyle(2, 0xffffff, 0.12)
+            .setDepth(95);
+
+        this.add.text(68, baseY - 60, 'MOVE', {
+            fontFamily: 'Arial Black',
+            fontSize: '14px',
+            color: '#9fe7ff'
+        }).setDepth(102);
+
+        this.add.text(this.scale.width - 255, baseY - 60, 'ACTIONS', {
+            fontFamily: 'Arial Black',
+            fontSize: '14px',
+            color: '#9fe7ff'
+        }).setDepth(102);
+
+        const createButton = (x, y, width, height, label, fill, onDown, onUp) => {
+            const button = this.add.rectangle(x, y, width, height, fill, 0.75)
+                .setStrokeStyle(2, 0xffffff, 0.2)
+                .setDepth(100)
+                .setInteractive({ useHandCursor: true });
+
+            const buttonText = this.add.text(x, y, label, {
+                fontFamily: 'Arial Black',
+                fontSize: width >= 90 ? '22px' : '18px',
+                color: '#ffffff'
+            }).setOrigin(0.5).setDepth(101);
+
+            button.on('pointerdown', () => {
+                button.setFillStyle(fill, 0.95);
+                if (onDown) onDown();
+            });
+
+            if (onUp) {
+                const release = () => {
+                    button.setFillStyle(fill, 0.75);
+                    onUp();
+                };
+
+                button.on('pointerup', release);
+                button.on('pointerout', release);
+                button.on('pointerupoutside', release);
+            }
+
+            return { button, buttonText };
+        };
+
+        createButton(leftX, baseY, 78, 78, '◀', 0x1f6cff, () => {
+            this.player.setTouchDirection('left', true);
+        }, () => {
+            this.player.setTouchDirection('left', false);
+        });
+
+        createButton(rightX, baseY, 78, 78, '▶', 0x1f6cff, () => {
+            this.player.setTouchDirection('right', true);
+        }, () => {
+            this.player.setTouchDirection('right', false);
+        });
+
+        createButton(jumpX, baseY - 18, 88, 88, 'JUMP', 0x13b26b, () => {
+            this.player.requestTouchJump();
+        });
+
+        createButton(attackX, baseY - 18, 88, 88, 'ATTACK', 0xe04b4b, () => {
+            this.player.requestTouchAttack();
+        });
+
+        createButton(kickX, baseY - 18, 88, 88, 'KICK', 0xff9f1c, () => {
+            this.player.requestTouchKick();
+        });
+    }
+
+    createControlGuide() {
+        const panelX = 150;
+        const panelY = this.scale.height / 2 - 200;
+        const panelWidth = 220;
+        const panelHeight = 170;
+
+        this.controlGuideBg = this.add.rectangle(panelX, panelY, panelWidth, panelHeight, 0x0b1020, 0.62)
+            .setStrokeStyle(2, 0xffffff, 0.18)
+            .setDepth(99);
+
+        this.controlGuideGlow = this.add.rectangle(panelX, panelY, panelWidth + 10, panelHeight + 10, 0x3ad6ff, 0.08)
+            .setDepth(98);
+
+        this.add.text(panelX - 78, panelY - 64, 'CONTROLS', {
+            fontSize: '17px',
+            fontFamily: 'Arial Black',
+            color: '#ffffff',
+            stroke: '#000000',
+            strokeThickness: 4
+        }).setDepth(102);
+
+        this.add.text(panelX - 88, panelY - 34, 'Move', {
+            fontSize: '14px',
+            fontFamily: 'Arial Black',
+            color: '#9fe7ff'
+        }).setDepth(102);
+
+        this.add.text(panelX + 8, panelY - 34, '←  →', {
+            fontSize: '14px',
+            fontFamily: 'Arial Black',
+            color: '#ffffff'
+        }).setDepth(102);
+
+        this.add.text(panelX - 88, panelY - 4, 'Jump', {
+            fontSize: '14px',
+            fontFamily: 'Arial Black',
+            color: '#9fe7ff'
+        }).setDepth(102);
+
+        this.add.text(panelX + 8, panelY - 4, '↑', {
+            fontSize: '16px',
+            fontFamily: 'Arial Black',
+            color: '#ffffff'
+        }).setDepth(102);
+
+        this.add.text(panelX - 88, panelY + 26, 'Attack', {
+            fontSize: '14px',
+            fontFamily: 'Arial Black',
+            color: '#9fe7ff'
+        }).setDepth(102);
+
+        this.add.text(panelX + 8, panelY + 26, 'SPACE', {
+            fontSize: '14px',
+            fontFamily: 'Arial Black',
+            color: '#ffffff'
+        }).setDepth(102);
+
+        this.add.text(panelX - 88, panelY + 56, 'Kick / Dash', {
+            fontSize: '13px',
+            fontFamily: 'Arial Black',
+            color: '#9fe7ff'
+        }).setDepth(102);
+
+        this.add.text(panelX + 8, panelY + 56, 'X', {
+            fontSize: '14px',
+            fontFamily: 'Arial Black',
+            color: '#ffffff'
+        }).setDepth(102);
+
+        this.add.text(panelX - 88, panelY + 86, 'Tip', {
+            fontSize: '13px',
+            fontFamily: 'Arial Black',
+            color: '#ffe27a'
+        }).setDepth(102);
+
+        this.add.text(panelX - 56, panelY + 86, 'Close in to land hits faster.', {
+            fontSize: '12px',
+            fontFamily: 'Arial',
+            color: '#ffffff'
+        }).setDepth(102);
     }
 
     createPlayerHealthBar() {

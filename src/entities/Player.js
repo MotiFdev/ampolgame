@@ -11,6 +11,14 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.kickDashEndTime = 0;
         this.isHit = false;
         this.isDead = false;
+        this.touchControlsEnabled = false;
+        this.touchInput = {
+            left: false,
+            right: false
+        };
+        this.touchJumpRequested = false;
+        this.touchAttackRequested = false;
+        this.touchKickRequested = false;
         
         // Setup physics
         scene.physics.world.enable(this);
@@ -64,9 +72,76 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             return;
         }
         
-        this.handleInput(time);
+        if (this.touchControlsEnabled) {
+            this.handleTouchInput(time);
+        } else {
+            this.handleInput(time);
+        }
         this.handleAnimation();
         this.handleJumping();
+    }
+
+    enableTouchControls() {
+        this.touchControlsEnabled = true;
+    }
+
+    setTouchDirection(direction, isDown) {
+        if (direction === 'left') {
+            this.touchInput.left = isDown;
+            if (isDown) {
+                this.touchInput.right = false;
+            }
+        } else if (direction === 'right') {
+            this.touchInput.right = isDown;
+            if (isDown) {
+                this.touchInput.left = false;
+            }
+        }
+    }
+
+    requestTouchJump() {
+        this.touchJumpRequested = true;
+    }
+
+    requestTouchAttack() {
+        this.touchAttackRequested = true;
+    }
+
+    requestTouchKick() {
+        this.touchKickRequested = true;
+    }
+
+    handleTouchInput(time) {
+        if (this.touchAttackRequested) {
+            this.touchAttackRequested = false;
+            this.startAttack('punch');
+            return;
+        }
+
+        if (this.touchKickRequested) {
+            this.touchKickRequested = false;
+            this.startKick(time);
+            return;
+        }
+
+        const onGround = this.body.blocked.down || this.body.touching.down;
+
+        if (this.touchJumpRequested && onGround) {
+            this.body.setVelocityY(-PlayerConstants.JUMP_SPEED);
+            this.touchJumpRequested = false;
+        }
+
+        this.body.setVelocityX(0);
+
+        if (this.touchInput.left) {
+            this.body.setVelocityX(-PlayerConstants.WALK_SPEED);
+            this.setFlipX(false);
+            this.facing = 'left';
+        } else if (this.touchInput.right) {
+            this.body.setVelocityX(PlayerConstants.WALK_SPEED);
+            this.setFlipX(true);
+            this.facing = 'right';
+        }
     }
     
     handleAttackMovement(time) {
@@ -144,7 +219,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         if (this.isAttacking || this.isHit || this.isDead) return;
         
         // Walking animation
-        if (this.cursors.left.isDown || this.cursors.right.isDown) {
+        if (this.touchControlsEnabled ? (this.touchInput.left || this.touchInput.right) : (this.cursors.left.isDown || this.cursors.right.isDown)) {
             const walkAnim = this.facing === 'right' ? 'walk_right' : 'walk_left';
             if (this.anims.currentAnim?.key !== walkAnim) {
                 this.play(walkAnim);
@@ -156,7 +231,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         if (this.isHit || this.isDead) return;
 
         const isInAir = !(this.body.blocked.down || this.body.touching.down);
-        const isMoving = this.cursors.left.isDown || this.cursors.right.isDown;
+        const isMoving = this.touchControlsEnabled
+            ? (this.touchInput.left || this.touchInput.right)
+            : (this.cursors.left.isDown || this.cursors.right.isDown);
         
         if (isInAir && !this.isAttacking) {
             const isGoingUp = this.body.velocity.y < 0;
